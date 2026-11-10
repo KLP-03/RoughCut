@@ -124,14 +124,15 @@ def pick_heuristic(segs, n, min_s, max_s):
 
 
 def pick_moments(segs, n=5, min_s=15, max_s=60, use_llm=True, model=DEFAULT_MODEL):
-    if use_llm and os.environ.get("ANTHROPIC_API_KEY"):
+    if use_llm:
         try:
             picks = _valid(segs, pick_with_llm(segs, n, min_s, max_s, model), min_s, max_s)
             if picks:
                 return sorted(picks, key=lambda c: c["start"])
             print("  LLM picks did not pass validation; falling back to the heuristic.")
-        except Exception as e:  # network, auth, or parsing problems should never stop the edit
-            print(f"  LLM selection failed ({e}); falling back to the heuristic.")
-    elif use_llm:
-        print("  ANTHROPIC_API_KEY not set; using the built-in heuristic.")
+        except Exception as e:  # missing credentials, network, or parsing problems should never stop the edit
+            if "authentication" in str(e).lower():
+                print("  No Claude credentials found (run `ant auth login`, or set ANTHROPIC_API_KEY); using the built-in heuristic.")
+            else:
+                print(f"  LLM selection failed ({e}); falling back to the heuristic.")
     return sorted(pick_heuristic(segs, n, min_s, max_s), key=lambda c: c["start"])

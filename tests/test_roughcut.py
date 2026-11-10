@@ -46,14 +46,20 @@ class SelectionTests(unittest.TestCase):
             {"start_segment": 0, "end_segment": 0, "title": "too short"},
             {"start_segment": 99, "end_segment": 120, "title": "out of range"},
         ]
-        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test"}), mock.patch.object(select, "pick_with_llm", return_value=fake):
+        with mock.patch.object(select, "pick_with_llm", return_value=fake):
             clips = select.pick_moments(self.segs, 4, 15, 60)
         self.assertEqual(len(clips), 1)
         self.assertEqual(clips[0]["title"], "The index mistake")
         self.assertEqual(clips[0]["picked_by"], "llm")
 
+    def test_no_credentials_falls_back(self):
+        err = TypeError("Could not resolve authentication method. Expected one of api_key, auth_token, or credentials")
+        with mock.patch.object(select, "pick_with_llm", side_effect=err):
+            clips = select.pick_moments(self.segs, 3, 15, 60)
+        self.assertEqual(len(clips), 3)
+
     def test_llm_failure_falls_back(self):
-        with mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test"}), mock.patch.object(select, "pick_with_llm", side_effect=RuntimeError("offline")):
+        with mock.patch.object(select, "pick_with_llm", side_effect=RuntimeError("offline")):
             clips = select.pick_moments(self.segs, 3, 15, 60)
         self.assertEqual(len(clips), 3)
         self.assertTrue(all(c["picked_by"] == "heuristic" for c in clips))

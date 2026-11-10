@@ -23,7 +23,7 @@ Run it on one video and you get a folder with:
 ## How it works
 
 1. **Transcribe.** [faster-whisper](https://github.com/SYSTRAN/faster-whisper) runs Whisper locally, so footage never leaves your machine for this step.
-2. **Pick moments.** If `ANTHROPIC_API_KEY` is set, Claude reads the transcript and picks standalone moments with a strong hook and a complete ending. Every pick is checked for length, range, and overlap before it's used. Without a key, or if the API call fails, a built-in heuristic scores moments on pacing, questions, hook words, specifics, and whether they end on a complete thought.
+2. **Pick moments.** If you're signed in to Claude (via `ant auth login` or an API key), Claude reads the transcript and picks standalone moments with a strong hook and a complete ending. Every pick is checked for length, range, and overlap before it's used. Without a key, or if the API call fails, a built-in heuristic scores moments on pacing, questions, hook words, specifics, and whether they end on a complete thought.
 3. **Build the timeline.** roughcut writes a CMX3600 EDL. It reads the camera's embedded timecode, so the edit lines up with your original media in Resolve.
 4. **Render.** ffmpeg center-crops each moment to 9:16, burns in captions, and grabs thumbnail frames.
 
@@ -41,11 +41,13 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e .
 ```
 
-Optional, for AI-picked moments:
+Optional, for AI-picked moments, sign in once with Anthropic's `ant` CLI (no API key to manage):
 
 ```bash
-export ANTHROPIC_API_KEY=your_key_here
+ant auth login
 ```
+
+roughcut picks up that sign-in automatically. An `ANTHROPIC_API_KEY` environment variable also works. With neither, roughcut uses its built-in heuristic.
 
 ## Usage
 
