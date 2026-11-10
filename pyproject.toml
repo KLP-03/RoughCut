@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "roughcut"
+version = "0.1.0"
+description = "Turn raw footage into a DaVinci Resolve rough cut, captions, vertical clips, and thumbnail options."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "James Hortman" }]
+dependencies = ["faster-whisper>=1.0", "anthropic>=0.40"]
+
+[project.scripts]
+roughcut = "roughcut.cli:main"
+
+[tool.setuptools]
+packages = ["roughcut"]

@@ -1,0 +1,154 @@
+{
+  "segments": [
+    {
+      "start": 2.0,
+      "end": 6.68,
+      "text": "Most teams don't realize their database is the slowest part of their app."
+    },
+    {
+      "start": 7.08,
+      "end": 10.68,
+      "text": "I see it all the time when I'm reviewing code."
+    },
+    {
+      "start": 11.08,
+      "end": 16.48,
+      "text": "The page loads, the API is fast, and then one query takes two full seconds."
+    },
+    {
+      "start": 16.88,
+      "end": 19.08,
+      "text": "So why does that happen?"
+    },
+    {
+      "start": 19.48,
+      "end": 24.52,
+      "text": "Usually it's a missing index on a column you filter by every single request."
+    },
+    {
+      "start": 24.92,
+      "end": 29.24,
+      "text": "Think of an index like the table of contents in a book."
+    },
+    {
+      "start": 29.64,
+      "end": 33.6,
+      "text": "Without it, the database reads every page to find one line."
+    },
+    {
+      "start": 34.0,
+      "end": 37.24,
+      "text": "With it, it jumps straight to the right page."
+    },
+    {
+      "start": 37.64,
+      "end": 41.24,
+      "text": "Here's the biggest mistake I made early in my career."
+    },
+    {
+      "start": 41.64,
+      "end": 45.96,
+      "text": "I added indexes to everything because I thought more was always better."
+    },
+    {
+      "start": 46.36,
+      "end": 49.24,
+      "text": "Every index makes reads faster but writes slower."
+    },
+    {
+      "start": 49.64,
+      "end": 53.6,
+      "text": "Our insert times doubled and nobody knew why for a week."
+    },
+    {
+      "start": 54.0,
+      "end": 56.88,
+      "text": "The fix was simple once we measured it."
+    },
+    {
+      "start": 57.28,
+      "end": 59.8,
+      "text": "We dropped eleven indexes nobody was using."
+    },
+    {
+      "start": 60.2,
+      "end": 63.8,
+      "text": "Writes got fast again and reads didn't change at all."
+    },
+    {
+      "start": 64.2,
+      "end": 66.72,
+      "text": "So here's the rule I follow now."
+    },
+    {
+      "start": 67.12,
+      "end": 71.08,
+      "text": "Measure first, then index the queries that actually run the most."
+    },
+    {
+      "start": 71.48,
+      "end": 74.36,
+      "text": "How do you know which queries those are?"
+    },
+    {
+      "start": 74.76,
+      "end": 79.08,
+      "text": "Turn on query insights and sort by total time, not average time."
+    },
+    {
+      "start": 79.48,
+      "end": 85.6,
+      "text": "A query that takes ten milliseconds but runs a million times matters more than one slow report."
+    },
+    {
+      "start": 86.0,
+      "end": 89.96,
+      "text": "That one change saved us real money on our cloud bill."
+    },
+    {
+      "start": 90.36,
+      "end": 92.56,
+      "text": "The second thing is connection limits."
+    },
+    {
+      "start": 92.96,
+      "end": 96.56,
+      "text": "When traffic spikes, every serverless function opens its own connection."
+    },
+    {
+      "start": 96.96,
+      "end": 101.64,
+      "text": "Your database runs out of connections long before it runs out of CPU."
+    },
+    {
+      "start": 102.04,
+      "end": 106.0,
+      "text": "Connection pooling fixes that by sharing a small number of connections."
+    },
+    {
+      "start": 106.4,
+      "end": 111.44,
+      "text": "It's the difference between a launch day that works and one that falls over."
+    },
+    {
+      "start": 111.84,
+      "end": 116.16,
+      "text": "If you take one thing away from this talk, make it this."
+    },
+    {
+      "start": 116.56,
+      "end": 119.44,
+      "text": "Your database is part of your product experience."
+    },
+    {
+      "start": 119.84,
+      "end": 123.8,
+      "text": "Treat it that way and your users will feel the difference."
+    },
+    {
+      "start": 124.2,
+      "end": 126.4,
+      "text": "Thanks for having me."
+    }
+  ]
+}

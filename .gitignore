@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+*_roughcut/
+*.mp4
+*.mov
+.env
