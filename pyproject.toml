@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "James Hortman" }]
-dependencies = ["faster-whisper>=1.0", "anthropic>=2.8"]
+dependencies = ["faster-whisper>=1.0", "anthropic>=2.8", "opencv-python-headless>=4.8,<5"]
 
 [project.scripts]
 roughcut = "roughcut.cli:main"

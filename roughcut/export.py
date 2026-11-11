@@ -35,21 +35,42 @@ def write_captions(segs, clips, out: Path) -> None:
         (out / "clips" / f"clip_{i:02d}.srt").write_text(to_srt(clip_segs, offset=c["start"]))
 
 
-def render_vertical(media: MediaInfo, clips, out: Path, burn_captions=True) -> None:
+LAYOUTS = {
+    # One 9:16 slice from the middle of the frame. Best for a single speaker.
+    "center": "[0:v]crop='min(iw,ih*9/16)':ih,scale=1080:1920:flags=lanczos,setsar=1[v]",
+    # Left half on top, right half on the bottom, each 1080x960. Best for a two-person podcast.
+    "stack": (
+        "[0:v]split=2[l][r];"
+        "[l]crop='min(iw,ih*9/8)':ih:0:0,scale=1080:960:flags=lanczos,setsar=1[top];"
+        "[r]crop='min(iw,ih*9/8)':ih:'iw-min(iw,ih*9/8)':0,scale=1080:960:flags=lanczos,setsar=1[bottom];"
+        "[top][bottom]vstack=inputs=2[v]"
+    ),
+}
+
+from . import framing
+def render_vertical(media: MediaInfo, clips, out: Path, burn_captions=True, layout="center") -> None:
     can_burn = burn_captions and has_filter("subtitles")
     if burn_captions and not can_burn:
         print("  Your ffmpeg build has no 'subtitles' filter; rendering clips without burned-in captions.")
     for i, c in enumerate(clips, 1):
-        # Center-crop to 9:16, then scale to 1080x1920 for Reels, Shorts, and TikTok.
-        vf = "crop='min(iw,ih*9/16)':ih,scale=1080:1920:flags=lanczos,setsar=1"
+        if layout == "auto":
+            graph, plan = framing.auto_graph(media, c)
+            c["framing"] = plan
+            kinds = ", ".join(f"{m}" for _s, _e, m, _x in plan)
+            print(f"  clip {i}: {len(plan)} framing section(s): {kinds}")
+        else:
+            graph = LAYOUTS[layout]
+            c["framing"] = [(0.0, c["end"] - c["start"], layout, 0.5)]
         srt = out / "clips" / f"clip_{i:02d}.srt"
         if can_burn:
-            style = "FontName=Arial,FontSize=13,Bold=1,Outline=2,Shadow=0,MarginV=70,Alignment=2"
-            vf += f",subtitles='{srt.as_posix()}':force_style='{style}'"
+            # Stacked clips get captions in the middle, where the two shots meet.
+            align = {"stack": "Alignment=5", "auto": "MarginV=45,Alignment=2"}.get(layout, "MarginV=70,Alignment=2")
+            style = f"FontName=Arial,FontSize=13,Bold=1,Outline=2,Shadow=0,{align}"
+            graph = graph[: -len("[v]")] + f"[pre];[pre]subtitles='{srt.as_posix()}':force_style='{style}'[v]"
         run_ffmpeg([
             "-ss", f"{c['start']:.3f}", "-i", media.path, "-t", f"{c['end'] - c['start']:.3f}",
-            "-map", "0:v:0", "-map", "0:a:0?",
-            "-vf", vf, "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+            "-filter_complex", graph, "-map", "[v]", "-map", "0:a:0?",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "20",
             "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", "-write_tmcd", "0",
             str(out / "clips" / f"clip_{i:02d}_vertical.mp4"),
         ])

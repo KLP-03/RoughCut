@@ -6,3 +6,8 @@ __pycache__/
 *.mp4
 *.mov
 .env
+# roughcut results (transcripts, clips, client footage): never commit
+output/
+Truth Hurts Claude picks/
+.DS_Store
+.DS_Store

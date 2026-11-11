@@ -3,15 +3,47 @@ import json
 from pathlib import Path
 
 
-def transcribe(path: str, model_size: str = "small", language: str | None = None) -> list[dict]:
+SAMPLE_RATE = 16000
+
+
+def load_audio(path: str):
+    """Decode any video's audio to 16 kHz mono float32 with ffmpeg.
+
+    We do this ourselves instead of letting faster-whisper use PyAV, because
+    newer PyAV releases break faster-whisper's decoder, and ffmpeg reads every
+    camera format (ProRes .mov, XAVC .mp4, MXF) reliably.
+    """
+    import subprocess
+
+    import numpy as np
+
+    from .media import require
+
+    require("ffmpeg")
+    proc = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-loglevel", "error", "-i", path, "-vn", "-ac", "1",
+         "-ar", str(SAMPLE_RATE), "-f", "f32le", "-"],
+        capture_output=True,
+    )
+    if proc.returncode != 0:
+        raise SystemExit(f"ffmpeg couldn't read the audio in {path}:\n{proc.stderr.decode(errors='ignore').strip()}")
+    audio = np.frombuffer(proc.stdout, dtype=np.float32)
+    if audio.size == 0:
+        raise SystemExit(f"No audio track found in {path}")
+    return audio
+
+
+def transcribe(path: str, model_size: str = "small", language: str | None = None, device: str = "auto") -> list[dict]:
     try:
         from faster_whisper import WhisperModel
     except ImportError as e:
-        raise SystemExit("faster-whisper is not installed. Run: pip install -r requirements.txt") from e
-    model = WhisperModel(model_size, device="auto", compute_type="auto")
-    segments, _info = model.transcribe(path, language=language, vad_filter=True)
+        raise SystemExit("faster-whisper is not installed. Run: pip install -e .") from e
+    audio = load_audio(path)
+    print(f"  loaded {audio.size / SAMPLE_RATE / 60:.1f} minutes of audio")
+    model = WhisperModel(model_size, device=device, compute_type="auto")
+    segments, _info = model.transcribe(audio, language=language, vad_filter=True)
     out = []
-    for i, seg in enumerate(segments):
+    for seg in segments:
         text = seg.text.strip()
         if text:
             out.append({"id": len(out), "start": round(seg.start, 3), "end": round(seg.end, 3), "text": text})

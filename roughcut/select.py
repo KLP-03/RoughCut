@@ -5,15 +5,15 @@ import re
 
 DEFAULT_MODEL = os.environ.get("ROUGHCUT_MODEL", "claude-sonnet-5-5")
 
-PROMPT = """You are a video editor at a developer-focused company. Below is a transcript split into numbered segments with timestamps (seconds).
+PROMPT = """You are an expert social video editor. Below is a transcript
 
 Pick the {n} strongest standalone moments for short-form social clips. Each clip must:
 - run between {min_s} and {max_s} seconds (end of last segment minus start of first segment)
 - open with a hook that makes sense without context, and end on a complete thought
+- if the moment answers a question, start the clip at the question so viewers have context
 - not overlap any other clip
 
-Respond with ONLY a JSON array, no prose and no code fences. Each item:
-{{"start_segment": int, "end_segment": int, "title": "max 8 words", "hook": "the opening line, quoted from the transcript", "thumbnail_text": "2 to 5 punchy words", "why": "one sentence"}}
+For each clip give: start_segment and end_segment (segment numbers), a title of at most 8 words, the hook (the opening line, quoted from the transcript), thumbnail_text (2 to 5 punchy words), and why (one sentence).
 
 Transcript:
 {transcript}"""
@@ -64,17 +64,50 @@ def _short(text, max_words):
     return text if len(words) <= max_words else " ".join(words[:max_words]) + "..."
 
 
+CLIPS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "clips": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "start_segment": {"type": "integer"},
+                    "end_segment": {"type": "integer"},
+                    "title": {"type": "string"},
+                    "hook": {"type": "string"},
+                    "thumbnail_text": {"type": "string"},
+                    "why": {"type": "string"},
+                },
+                "required": ["start_segment", "end_segment", "title", "hook", "thumbnail_text", "why"],
+                "additionalProperties": False,
+            },
+        }
+    },
+    "required": ["clips"],
+    "additionalProperties": False,
+}
+
+
 def pick_with_llm(segs, n, min_s, max_s, model=DEFAULT_MODEL):
     import anthropic  # imported lazily so the heuristic path has no dependency
 
     transcript = "\n".join(f"[{s['id']}] {s['start']:.1f}-{s['end']:.1f}: {s['text']}" for s in segs)
     msg = anthropic.Anthropic().messages.create(
         model=model,
-        max_tokens=2000,
+        max_tokens=16000,
+        # Structured outputs: Claude's reply is guaranteed to be JSON matching CLIPS_SCHEMA.
+        output_config={"format": {"type": "json_schema", "schema": CLIPS_SCHEMA}},
         messages=[{"role": "user", "content": PROMPT.format(n=n, min_s=min_s, max_s=max_s, transcript=transcript)}],
     )
-    raw = "".join(block.text for block in msg.content if getattr(block, "type", "") == "text")
-    return parse_llm_json(raw)
+    raw = "".join(getattr(block, "text", "") for block in msg.content if getattr(block, "type", "") == "text")
+    stop = getattr(msg, "stop_reason", None)
+    if stop not in (None, "end_turn"):
+        raise ValueError(f"Claude stopped early (stop_reason: {stop}); its reply began: {raw[:200]!r}")
+    try:
+        return json.loads(raw)["clips"]
+    except (json.JSONDecodeError, KeyError, TypeError):
+        return parse_llm_json(raw)
 
 
 def parse_llm_json(raw: str):
