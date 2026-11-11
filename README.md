@@ -1,5 +1,7 @@
 # roughcut
 
+https://github.com/user-attachments/assets/436764e0-653f-4183-b1f8-1f5838e51687
+
 **Turn a long podcast, interview, or talk into framed, captioned vertical clips, plus editable timelines in DaVinci Resolve, with one command.**
 
 roughcut transcribes your footage, has Claude pick the strongest moments, frames every shot for 9:16 (stacking two-person wide shots, following the face in close-ups), burns in captions, and builds a vertical timeline in Resolve for each clip where every framing decision is a normal Zoom and Position value you can adjust.
